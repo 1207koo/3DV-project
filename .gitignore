@@ -1,0 +1,14 @@
+__pycache__
+.ipynb_checkpoints
+
+d2-net/checkpoints*
+d2-net/train_vis
+d2-net/models
+d2-net/log.txt
+d2-net/hpatches_sequences/hseq.pdf
+d2-net/hpatches_sequences/hseq-top.pdf
+d2-net/hpatches_sequences/hpatches-sequences-release*
+d2-net/hpatches_sequences/cache
+d2-net/hpatches_sequences/cache-top
+d2-net/vlfeat
+d2-net/*.d2-net
