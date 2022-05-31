@@ -1,0 +1,7 @@
+dataset_name dataset_path
+MegaDepth /gallery_moma/junseo.koo/dataset/MegaDepth
+COCO2014 /gallery_moma/junseo.koo/dataset/COCO2014
+InLoc /gallery_moma/junseo.koo/dataset/inloc
+Extended_CMU_Seasons /gallery_moma/junseo.koo/dataset/extended_cmu_seasons
+Aachen_Day_Night /gallery_tate/jinseo.jeong/DATA/3dcv/Aachen-Day-Night
+HPatches /gallery_tate/jinseo.jeong/DATA/3dcv/HPatches
