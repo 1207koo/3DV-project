@@ -1,0 +1,13 @@
+# model structure
+
+feature =
+[
+    32, 32, 'M',
+    64, 64, 'M',
+    128, 128, 'M',
+    128, 64, -1
+] # -1 for args.dim
+feature_nonlinear = 'lrelu_0.1'
+
+expansion = [128, 256, 256, -1] # -1 for args.original_dim
+expansion_nonlinear = 'lrelu_0.1'

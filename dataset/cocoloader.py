@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 
 
 class COCODataset(Dataset):
-    def __init__(self, dataset_path='/gallery_moma/junseo.koo/dataset/COCO2014', use=['train2014'], transform=[], warp_transform=[]):
+    def __init__(self, dataset_path='', use=['train2014'], transform=[], warp_transform=[]):
         assert os.path.isdir(dataset_path), 'Cannot access dataset path: {}'.format(dataset_path)
         self.dataset_path = dataset_path
         self.use = use
@@ -41,3 +41,27 @@ class COCODataset(Dataset):
             return self.toTensor(img), self.toTensor(img_warp)
         return self.toTensor(img)
 
+class Resize:
+    def __init__(self, img_size):
+        if type(img_size) == int:
+            self.h = img_size
+            self.w = img_size
+        else:
+            self.h = img_size[0]
+            self.w = img_size[1]
+    def __call__(self, img):
+        return cv2.imresize(img, (self.w, self.h))
+
+class RandomCrop:
+    def __init__(self, img_size):
+        if type(img_size) == int:
+            self.h = img_size
+            self.w = img_size
+        else:
+            self.h = img_size[0]
+            self.w = img_size[1]
+    def __call__(self, img):
+        h, w = img.shape[:2]
+        hp = np.random.randint(h - self.h + 1)
+        wp = np.random.randint(w - self.w + 1)
+        return img[hp:hp+self.h, wp:wp+self.w]
