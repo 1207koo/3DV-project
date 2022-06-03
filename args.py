@@ -30,14 +30,6 @@ parser.add_argument("--wandb", type=str, default='', help="wandb entity name")
 args = parser.parse_args()
 
 
-if args.device[:5] == "cuda:" and len(args.device) > 5:
-    args.devices = []
-    for i in range(len(args.device) - 5):
-        args.devices.append(int(args.device[i+5]))
-    args.device = args.device[:6]
-else:
-    args.devices = [args.device]
-
 if args.device == 'cpu':
     args.devices = [args.device]
 else:
