@@ -81,6 +81,34 @@ class RandomCrop:
         wp = np.random.randint(w - self.w + 1)
         return img[hp:hp+self.h, wp:wp+self.w]
 
+class StrongCrop:
+    def __init__(self, img_size):
+        if type(img_size) == int:
+            self.h = img_size
+            self.w = img_size
+        else:
+            self.h = img_size[0]
+            self.w = img_size[1]
+    def __call__(self, img):
+        h, w = img.shape[:2]
+        hs, ws = self.h, self.w
+        if hs > h:
+            ws = int(ws * h / hs)
+            hs = h
+        if ws > w:
+            hs = int(hs * w / ws)
+            ws = w
+        hp = np.random.randint(h - hs + 1)
+        wp = np.random.randint(w - ws + 1)
+        cimg = img[hp:hp+hs, wp:wp+ws]
+        return cv2.resize(cimg, (self.w, self.h))
+
+class ColorNormal:
+    def __init__(self, color_max=2555):
+        self.cmax = color_max
+    def __call__(self, img):
+        return img / self.cmax
+
 class Homography:
     def __init__(self, h):
         self.h = h

@@ -36,5 +36,6 @@ else:
     args.devices = []
     for i in range(int(args.device)):
         args.devices.append('cuda:%d'%i)
+    args.device = 'cuda:0'
 
 args.model_config = config_parse(args.model_config)

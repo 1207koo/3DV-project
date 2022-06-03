@@ -41,17 +41,17 @@ class SoftDetectionModule(nn.Module):
 
 class D3Net(nn.Module):
     # detect and describe and distill
-    def __init__(self, model_file=''):
+    def __init__(self):
         super(D3Net, self).__init__()
 
         self.feature = create_cnn(args.model_config['feature'], args.model_config['feature_nonlinear'], negative=args.dim)
         self.detection = SoftDetectionModule()
         self.expansion = create_cnn(args.model_config['expansion'], args.model_config['expansion_nonlinear'], kernel=1, last_dim=args.dim, negative=args.original_dim)
 
-        if model_file == '':
+        if args.load_model == '':
             self.init_weight()
         else:
-            self.load_state_dict(torch.load(model_file))
+            self.load_state_dict(torch.load(args.load_model, map_location='cpu'))
 
     def init_weight(self):
         if args.model_config['feature_nonlinear'] == 'relu':
