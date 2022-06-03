@@ -36,9 +36,12 @@ class COCODataset(Dataset):
                 img = tf(img)
         if len(self.warp_transform) > 0:
             img_warp = img
+            homography = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
             for tf in self.warp_transform:
-                img_warp = tf(img_warp)
-            return self.toTensor(img), self.toTensor(img_warp)
+                if type(tf) == Homography:
+                    img_warp, h = tf(img_warp)
+                    homography = homography @ h
+            return self.toTensor(img), self.toTensor(img_warp), homography
         return self.toTensor(img)
 
 class Resize:
@@ -51,6 +54,18 @@ class Resize:
             self.w = img_size[1]
     def __call__(self, img):
         return cv2.imresize(img, (self.w, self.h))
+
+class ResizeRatio:
+    def __init__(self, ratio):
+        if type(ratio) == float:
+            self.hr = ratio
+            self.wr = ratio
+        else:
+            self.hr = ratio[0]
+            self.wr = ratio[1]
+    def __call__(self, img):
+        h, w = img.shape[:2]
+        return cv2.imresize(img, (int(w * self.wr), int(h * self.hr)))
 
 class RandomCrop:
     def __init__(self, img_size):
@@ -65,3 +80,13 @@ class RandomCrop:
         hp = np.random.randint(h - self.h + 1)
         wp = np.random.randint(w - self.w + 1)
         return img[hp:hp+self.h, wp:wp+self.w]
+
+class Homography:
+    def __init__(self, h):
+        self.h = h
+    def __call__(self, img):
+        raise NotImplementedError
+        # create random 3*3 homography
+        homography = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        # warp(image)
+        return img, homography
