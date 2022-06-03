@@ -48,8 +48,40 @@ class D3Net(nn.Module):
         self.detection = SoftDetectionModule()
         self.expansion = create_cnn(args.model_config['expansion'], args.model_config['expansion_nonlinear'], kernel=1, last_dim=args.dim, negative=args.original_dim)
 
-        if model_file != '':
+        if model_file == '':
+            self.init_weight()
+        else:
             self.load_state_dict(torch.load(model_file))
+
+    def init_weight(self):
+        if args.model_config['feature_nonlinear'] == 'relu':
+            nl = 'relu'
+        elif args.model_config['feature_nonlinear'][:5] == 'lrelu':
+            nl = 'leaky_relu'
+        for m in self.feature.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity=nl)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+        for m in self.detection.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+                
+        if args.model_config['expansion_nonlinear'] == 'relu':
+            nl = 'relu'
+        elif args.model_config['expansion_nonlinear'][:5] == 'lrelu':
+            nl = 'leaky_relu'
+        for m in self.expansion.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity=nl)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, batch, keypoint=None, run='fse'):
         # run = subset of 'fse', f: feature, s: score, e: expansion
