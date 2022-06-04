@@ -59,3 +59,93 @@ def create_cnn(model_config, nonlinear='relu', kernel=3, last_dim=3, negative=51
             elif l[0] == 'B':
                 layers.append(nn.BatchNorm2d(last_dim))
     return nn.Sequential(layers)
+
+def upscale_positions(pos, scaling_steps=0):
+    for _ in range(scaling_steps):
+        pos = pos * 2 + 0.5
+    return pos
+
+
+def downscale_positions(pos, scaling_steps=0):
+    for _ in range(scaling_steps):
+        pos = (pos - 0.5) / 2
+    return pos
+
+
+def interpolate_dense_features(pos, dense_features, return_corners=False):
+    device = pos.device
+
+    ids = torch.arange(0, pos.size(1), device=device)
+
+    _, h, w = dense_features.size()
+
+    i = pos[0, :]
+    j = pos[1, :]
+
+    # Valid corners
+    i_top_left = torch.floor(i).long()
+    j_top_left = torch.floor(j).long()
+    valid_top_left = torch.min(i_top_left >= 0, j_top_left >= 0)
+
+    i_top_right = torch.floor(i).long()
+    j_top_right = torch.ceil(j).long()
+    valid_top_right = torch.min(i_top_right >= 0, j_top_right < w)
+
+    i_bottom_left = torch.ceil(i).long()
+    j_bottom_left = torch.floor(j).long()
+    valid_bottom_left = torch.min(i_bottom_left < h, j_bottom_left >= 0)
+
+    i_bottom_right = torch.ceil(i).long()
+    j_bottom_right = torch.ceil(j).long()
+    valid_bottom_right = torch.min(i_bottom_right < h, j_bottom_right < w)
+
+    valid_corners = torch.min(
+        torch.min(valid_top_left, valid_top_right),
+        torch.min(valid_bottom_left, valid_bottom_right)
+    )
+
+    i_top_left = i_top_left[valid_corners]
+    j_top_left = j_top_left[valid_corners]
+
+    i_top_right = i_top_right[valid_corners]
+    j_top_right = j_top_right[valid_corners]
+
+    i_bottom_left = i_bottom_left[valid_corners]
+    j_bottom_left = j_bottom_left[valid_corners]
+
+    i_bottom_right = i_bottom_right[valid_corners]
+    j_bottom_right = j_bottom_right[valid_corners]
+
+    ids = ids[valid_corners]
+    if ids.size(0) == 0:
+        raise EmptyTensorError
+
+    # Interpolation
+    i = i[ids]
+    j = j[ids]
+    dist_i_top_left = i - i_top_left.float()
+    dist_j_top_left = j - j_top_left.float()
+    w_top_left = (1 - dist_i_top_left) * (1 - dist_j_top_left)
+    w_top_right = (1 - dist_i_top_left) * dist_j_top_left
+    w_bottom_left = dist_i_top_left * (1 - dist_j_top_left)
+    w_bottom_right = dist_i_top_left * dist_j_top_left
+
+    descriptors = (
+        w_top_left * dense_features[:, i_top_left, j_top_left] +
+        w_top_right * dense_features[:, i_top_right, j_top_right] +
+        w_bottom_left * dense_features[:, i_bottom_left, j_bottom_left] +
+        w_bottom_right * dense_features[:, i_bottom_right, j_bottom_right]
+    )
+
+    pos = torch.cat([i.view(1, -1), j.view(1, -1)], dim=0)
+
+    if not return_corners:
+        return [descriptors, pos, ids]
+    else:
+        corners = torch.stack([
+            torch.stack([i_top_left, j_top_left], dim=0),
+            torch.stack([i_top_right, j_top_right], dim=0),
+            torch.stack([i_bottom_left, j_bottom_left], dim=0),
+            torch.stack([i_bottom_right, j_bottom_right], dim=0)
+        ], dim=0)
+        return [descriptors, pos, ids, corners]
