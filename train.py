@@ -11,11 +11,17 @@ from args import args
 from datasets import *
 from model import *
 from util import *
-
+from d2_net.lib.model_test import D2Net
+from d2_net.lib.pyramid import process_multiscale
+from baselines import *
 
 if args.wandb:
     import wandb
     wandb.init(project="d3-net", entity=args.wandb, tags=['train', args.dataset, 'dim:%d'%args.dim, 'original_dim:%d'%args.original_dim], notes=str(vars(args)))
+
+
+teacher_model = D2Net(model_file='/gallery_tate/jinseo.jeong/3dcv/models/d2_tf.pth',
+                      use_relu=True, use_cuda=True)
 
 model = D3Net().to(args.device)
 if len(args.devices) > 1:
@@ -43,7 +49,10 @@ for epoch in epoch_tqdm:
 
         features, scores, efeatures = model(batch)
         # TODO: loss
-        loss = 0.0
+        # TODO: make sure that images are preprocess as done by D2Net.
+        gt_features = teacher_model.dense_feature_extraction(batch)
+        loss = F.mse_loss(features, gt_features) #+ homography?
+        #
 
         loss_sum += loss.item() * batch.shape[0]
         loss_cnt += batch.shape[0]
@@ -51,7 +60,7 @@ for epoch in epoch_tqdm:
         batch_tqdm.set_description('epoch: %03d, loss: %f'%(epoch, loss_sum / loss_cnt))
         loss.backward()
         optimizer.step()
-    
+
     scheduler.step()
 
 
@@ -81,7 +90,7 @@ for epoch in epoch_tqdm:
             torch.save(model[k].state_dict(), save_path)
         else:
             torch.save(model[k].module.state_dict(), save_path)
-    
+
     # logging
     if args.wandb:
         wandb.log(out_dict)
