@@ -1,7 +1,7 @@
 import cv2
 from d2_net.lib.model_test import D2Net
 from d2_net.lib.pyramid import process_multiscale
-from SuperPointPretrainednetwork.demo_superpoint import SuperPointFrontend
+from SuperPointPretrainedNetwork.demo_superpoint import SuperPointFrontend
 
 _d2net = D2Net(model_file='/gallery_tate/jinseo.jeong/3dcv/models/d2_tf.pth',
                use_relu=True, use_cuda=True)
