@@ -12,3 +12,5 @@ d2_net/hpatches_sequences/cache
 d2_net/hpatches_sequences/cache-top
 d2_net/vlfeat
 d2_net/*.d2-net
+
+save

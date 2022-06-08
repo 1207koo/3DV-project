@@ -3,6 +3,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+def str_args(args):
+    text = ''
+    for k, v in vars(args).items():
+        text += '%s=%s\n'%(str(k), str(v))
+    return text
+
 def config_parse(config_path):
     assert os.path.isfile(config_path), '%s config file not exists'%config_path
     with open(config_path, 'r') as f:
@@ -29,15 +35,16 @@ def config_parse(config_path):
         else:
             continue
         l = len(line.split(s)[0])
-        config[line[:l]] = eval(line[l+1:])
+        config[line[:l].replace(' ', '')] = eval(line[l+1:])
     
     return config
 
 def num_parameter(model):
     return np.sum([p.numel() for p in model.parameters()])
 
-def create_cnn(model_config, nonlinear='relu', kernel=3, last_dim=3, negative=512):
+def create_cnn(model_config, nonlinear='relu', kernel=3, last_dim=3, negative=512, return_scale = False):
     layers = []
+    scale = 1
     for l in model_config:
         if type(l) == int:
             if l == -1:
@@ -48,17 +55,21 @@ def create_cnn(model_config, nonlinear='relu', kernel=3, last_dim=3, negative=51
             if nonlinear == 'relu':
                 layers.append(nn.ReLU())
             elif nonlinear[:5] == 'lrelu':
-                layers.append(nn.LeakuReLU(float(nonlinear[6:])))
+                layers.append(nn.LeakyReLU(float(nonlinear[6:])))
         elif type(l) == str:
             if l[0] == 'M':
-                if len(l) == 0:
+                if len(l) == 1:
                     layers.append(nn.MaxPool2d(2, 2))
+                    scale *= 2
                 else:
                     s = int(l[1:])
                     layers.append(nn.MaxPool2d(s, s))
+                    scale *= s
             elif l[0] == 'B':
                 layers.append(nn.BatchNorm2d(last_dim))
-    return nn.Sequential(layers)
+    if return_scale:
+        return nn.Sequential(*layers), scale
+    return nn.Sequential(*layers)
 
 def upscale_positions(pos, scaling_steps=0):
     for _ in range(scaling_steps):

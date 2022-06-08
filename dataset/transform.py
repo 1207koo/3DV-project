@@ -72,11 +72,10 @@ class ColorNormal:
         return (img / self.cmax - self.mean.reshape((1, 1, 3))) / self.std.reshape((1, 1, 3))
 
 class Homography:
-    def __init__(self, h):
-        self.h = h
+    def __init__(self, h_range = np.array([[0.0625, 0.0625, 16.0], [0.0625, 0.0625, 16.0], [0.001, 0.001, 0.0625]])):
+        self.h_range = np.abs(h_range)
     def __call__(self, img):
-        raise NotImplementedError
-        # create random 3*3 homography
         homography = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
-        # warp(image)
+        homography += np.random.uniform(low=-self.h_range, high=self.h_range)
+        img = cv2.warpPerspective(img, homography, (img.shape[1], img.shape[0]))
         return img, homography
