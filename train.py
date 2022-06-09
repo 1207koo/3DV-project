@@ -17,14 +17,9 @@ from d2_net.extract_features import extract
 
 if args.wandb:
     import wandb
-<<<<<<< cc8a29a47a255aabce85b6b3b866cfa1aec2f542
-||||||| merged common ancestors
-    
-=======
 
 SIFT_DONE = False
 D2_DONE = False
->>>>>>> test code
 
 
 if args.teacher == 'd2net':
