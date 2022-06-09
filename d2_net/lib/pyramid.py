@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from d2_net.lib.exceptions import EmptyTensorError
-from d2_net.lib.utils import interpolate_dense_features, upscale_positions
+from .exceptions import EmptyTensorError
+from .utils import interpolate_dense_features, upscale_positions
 
 
 def process_multiscale(image, model, scales=[.5, 1, 2]):

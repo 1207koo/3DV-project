@@ -12,9 +12,19 @@ from datasets import *
 from model import *
 from util import *
 from baselines import *
+from test import test
+from d2_net.extract_features import extract
 
 if args.wandb:
     import wandb
+<<<<<<< cc8a29a47a255aabce85b6b3b866cfa1aec2f542
+||||||| merged common ancestors
+    
+=======
+
+SIFT_DONE = False
+D2_DONE = False
+>>>>>>> test code
 
 
 if args.teacher == 'd2net':
@@ -154,8 +164,17 @@ for epoch in epoch_tqdm:
     if (epoch + 1) == args.epoch:
         model.eval()
         # TODO: test code?
-        with torch.no_grad():
-            out_dict['test_acc'] = 0.0
+        if not SIFT_DONE:
+            extract(None, '.sift')
+            out_dict['test_sift_matches'] = test('sift')
+            SIFT_DONE = True
+        if not D2_DONE:
+            extract(None, '.d2-net')
+            out_dict['test_d2net_matches'] = test('d2-net')
+        
+        #extract(model, '.ours')
+        #with torch.no_grad():          
+        #    out_dict['test_acc'] = test('ours')
 
     if args.save_model != '':
         l = len(args.save_model.split('.')[-1]) + 1
