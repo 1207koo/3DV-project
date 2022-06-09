@@ -39,7 +39,7 @@ def mnn_matcher(descriptors_a, descriptors_b):
     matches = torch.stack([ids1[mask], nn12[mask]])
     return matches.t().data.cpu().numpy()
 
-def benchmark_features(read_feats):
+def benchmark_features(read_feats, verbose=True):
     seq_names = sorted(os.listdir(dataset_path))
 
     n_feats = []
@@ -48,7 +48,7 @@ def benchmark_features(read_feats):
     i_err = {thr: 0 for thr in rng}
     v_err = {thr: 0 for thr in rng}
 
-    for seq_idx, seq_name in tqdm(enumerate(seq_names), total=len(seq_names)):
+    for seq_idx, seq_name in tqdm(enumerate(seq_names), total=len(seq_names), leave=verbose):
         keypoints_a, descriptors_a = read_feats(seq_name, 1)
         n_feats.append(keypoints_a.shape[0])
 
@@ -151,6 +151,6 @@ def test(method, verbose=True):
             print('Loading precomputed errors...')
         errors[method] = np.load(output_file, allow_pickle=True)
     else:
-        errors[method] = benchmark_features(read_function)
+        errors[method] = benchmark_features(read_function, verbose=verbose)
         np.save(output_file, errors[method])
-    return summary(errors[method][-1])
+    return summary(errors[method][-1], verbose=verbose)

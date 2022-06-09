@@ -31,7 +31,7 @@ sift = None
 def extract_sift(batch, model=None):
     global sift
     if sift is None:
-        sift = cv2.xfeatures2d.SIFT_create()
+        sift = cv2.SIFT_create()
     kpts, dess = [], []
     for i in batch:
         k, d = sift.detectAndCompute(i, None)

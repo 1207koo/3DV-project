@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import numpy as np
 
@@ -40,13 +41,19 @@ def extract(model=None, output_extension='.d2-net'):
     elif output_extension == '.ours':
         assert model is not None, "specify the model"
     else:
-        model = cv2.xfeatures2d.SIFT_create()
+        model = cv2.SIFT_create()
 
     # Process the file
-    with open('image_list_hpatches_sequences.txt', 'r') as f:
+    seq_file = './d2_net/image_list_hpatches_sequences.txt'
+    if not os.path.isfile(seq_file):
+        seq_file = './image_list_hpatches_sequences.txt'
+    with open('./d2_net/image_list_hpatches_sequences.txt', 'r') as f:
         lines = f.readlines()
     for line in tqdm(lines, total=len(lines)):
-        path = line.strip()
+        if not os.path.isfile(line.strip()):
+            path = os.path.join('d2_net', line.strip())
+        else:
+            path = line.strip()
 
         image = imageio.imread(path)
         if len(image.shape) == 2:
