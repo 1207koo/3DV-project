@@ -33,7 +33,7 @@ parser.add_argument("--dataset", type=str, default="COCO2014", help="dataset to 
 parser.add_argument("--img-size", type=int, default=256, help="image size")
 parser.add_argument("--num-workers", type=int, default=8, help="num workers for dataset")
 
-parser.add_argument("--test-every", type=int, default=5, help="number of epochs per test")
+parser.add_argument("--test-every", type=int, default=1, help="number of epochs per test")
 parser.add_argument("--save-model", type=str, default="auto", help="save model path (auto for automatic path)")
 parser.add_argument("--load-model", type=str, default="", help="load model path")
 parser.add_argument("--wandb", type=str, default='', help="wandb entity name")

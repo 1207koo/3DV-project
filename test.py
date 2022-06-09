@@ -90,14 +90,15 @@ def benchmark_features(read_feats):
     
     return i_err, v_err, [seq_type, n_feats, n_matches]
 
-def summary(stats):
+def summary(stats, verbose=True):
     seq_type, n_feats, n_matches = stats
-    print('# Features: {:f} - [{:d}, {:d}]'.format(np.mean(n_feats), np.min(n_feats), np.max(n_feats)))
-    print('# Matches: Overall {:f}, Illumination {:f}, Viewpoint {:f}'.format(
-        np.sum(n_matches) / ((n_i + n_v) * 5), 
-        np.sum(n_matches[seq_type == 'i']) / (n_i * 5), 
-        np.sum(n_matches[seq_type == 'v']) / (n_v * 5))
-    )
+    if verbose:
+        print('# Features: {:f} - [{:d}, {:d}]'.format(np.mean(n_feats), np.min(n_feats), np.max(n_feats)))
+        print('# Matches: Overall {:f}, Illumination {:f}, Viewpoint {:f}'.format(
+            np.sum(n_matches) / ((n_i + n_v) * 5), 
+            np.sum(n_matches[seq_type == 'i']) / (n_i * 5), 
+            np.sum(n_matches[seq_type == 'v']) / (n_v * 5))
+        )
     return np.sum(n_matches) / ((n_i + n_v) * 5)
 
 def generate_read_function(method, extension='ppm'):
@@ -134,9 +135,10 @@ if not os.path.isdir(cache_dir):
 
 errors = {}
 
-def test(method):
+def test(method, verbose=True):
     output_file = os.path.join(cache_dir, method + '.npy')
-    print(method)
+    if verbose:
+        print(method)
     if method == 'hesaff':
         read_function = lambda seq_name, im_idx: parse_mat(loadmat(os.path.join(dataset_path, seq_name, '%d.ppm.hesaff' % im_idx), appendmat=False))
     else:
@@ -145,7 +147,8 @@ def test(method):
         else:
             read_function = generate_read_function(method)
     if False:#os.path.exists(output_file):
-        print('Loading precomputed errors...')
+        if verbose:
+            print('Loading precomputed errors...')
         errors[method] = np.load(output_file, allow_pickle=True)
     else:
         errors[method] = benchmark_features(read_function)

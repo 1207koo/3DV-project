@@ -20,7 +20,7 @@ if args.wandb:
 
 SIFT_DONE = False
 D2_DONE = False
-
+test_dict = {}
 
 if args.teacher == 'd2net':
     if args.keypoint:
@@ -155,28 +155,39 @@ for epoch in epoch_tqdm:
     # val
     if (epoch + 1) % args.test_every == 0:
         model.eval()
-        # TODO: validation code?
         with torch.no_grad():
-            out_dict['val_acc'] = 0.0
-        if 'best_val_acc' not in out_dict.keys():
-            out_dict['best_val_acc'] = out_dict['val_acc']
-        elif out_dict['best_val_acc'] < out_dict['val_acc']:
-            out_dict['best_val_acc'] = out_dict['val_acc']
+            if not SIFT_DONE:
+                extract(None, '.sift')
+                test_dict['sift_matches'] = test('sift', verbose=False)
+                SIFT_DONE = True
+            if not D2_DONE:
+                extract(None, '.d2-net')
+                test_dict['d2net_matches'] = test('d2-net', verbose=False)
+                D2_DONE = True
+        out_dict['val_sift_matches'] = test_dict['d2net_matches']
+        out_dict['val_d2net_matches'] = test_dict['d2net_matches']
+        with torch.no_grad():
+            extract(model, '.ours')
+            out_dict['val_matches'] = test('ours', verbose=False)
+        if 'best_val_matches' not in out_dict.keys() or out_dict['best_val_matches'] < out_dict['val_matches']:
+            out_dict['best_val_matches'] = out_dict['val_matches']
     # test
     if (epoch + 1) == args.epoch:
         model.eval()
-        # TODO: test code?
-        if not SIFT_DONE:
-            extract(None, '.sift')
-            out_dict['test_sift_matches'] = test('sift')
-            SIFT_DONE = True
-        if not D2_DONE:
-            extract(None, '.d2-net')
-            out_dict['test_d2net_matches'] = test('d2-net')
-        
-        #extract(model, '.ours')
-        #with torch.no_grad():          
-        #    out_dict['test_acc'] = test('ours')
+        with torch.no_grad():
+            if not SIFT_DONE:
+                extract(None, '.sift')
+                test_dict['sift_matches'] = test('sift', verbose=False)
+                SIFT_DONE = True
+            if not D2_DONE:
+                extract(None, '.d2-net')
+                test_dict['d2net_matches'] = test('d2-net', verbose=False)
+                D2_DONE = True
+        out_dict['test_sift_matches'] = test_dict['d2net_matches']
+        out_dict['test_d2net_matches'] = test_dict['d2net_matches']
+        with torch.no_grad():
+            extract(model, '.ours')
+            out_dict['test_matches'] = test('ours', verbose=True)
 
     if args.save_model != '':
         l = len(args.save_model.split('.')[-1]) + 1
@@ -191,7 +202,7 @@ for epoch in epoch_tqdm:
     for k, v in out_dict.items():
         if text != '':
             text += ', '
-        text += '%s: %s'%(str(k), str(v))
+        text += '%s: %f'%(k, v)
     epoch_tqdm.write(text)
     if args.wandb:
         wandb.log(out_dict)
