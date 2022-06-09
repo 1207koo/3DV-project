@@ -93,11 +93,15 @@ class HardDetectionModule(nn.Module):
 
 class D3Net(nn.Module):
     # detect and describe and distill
-    def __init__(self):
+    def __init__(self, mode='train'):
         super(D3Net, self).__init__()
+        self.mode = mode
 
         self.feature, self.feature_scale = create_cnn(args.model_config['feature'], args.model_config['feature_nonlinear'], negative=args.dim, return_scale=True)
-        self.detection = SoftDetectionModule()
+        if self.mode == 'train':
+            self.detection = SoftDetectionModule()
+        else:
+            self.detection = HardDetectionModule()
         self.expansion = create_cnn(args.model_config['expansion'], args.model_config['expansion_nonlinear'], kernel=1, last_dim=args.dim, negative=args.original_dim)
 
         if args.load_model == '':
@@ -139,9 +143,9 @@ class D3Net(nn.Module):
         # run = subset of 'fse', f: feature, s: score, e: expansion
         # keypoint: expansion only for given keypoints (Nx2 shape, h, w order)
         out_list = []
+        b = batch.shape[0]
         if keypoint is not None:
-            keypoint = keypoint / self.feature_scale - (self.feature_scale - 1) / (2 * self.feature_scale)
-            keypoint = keypoint.transpose((1, 0))
+            keypoint = [kp.permute((1, 0)) / self.feature_scale - (self.feature_scale - 1) / (2 * self.feature_scale) for kp in keypoint]
         if any([c in run for c in 'fse']):
             features = self.feature(batch)
             if 'f' in run:
@@ -149,17 +153,17 @@ class D3Net(nn.Module):
             if any([c in run for c in 'se']):
                 scores = self.detection(features)
                 if keypoint is not None:
-                    scores = interpolate_dense_features(keypoint, scores.unsqueeze(1)).squeeze(1)
+                    scores = [interpolate_dense_features(keypoint[i], scores[i].unsqueeze(0))[0].squeeze(0) for i in range(b)]
                 if 's' in run:
                     out_list.append(scores)
                 if any([c in run for c in 'e']): # 'e' in run
                     features_ = features
                     if keypoint is not None:
-                        features_ = interpolate_dense_features(keypoint, features).unsqueeze(-1)
+                        features_ = [interpolate_dense_features(keypoint[i], features[i])[0].unsqueeze(-1) for i in range(b)]
                         # features_ = features[:, :, keypoint[0], keypoint[1]].unsqueeze(-1)
-                    efeatures = self.expansion(features_)
-                    if keypoint is not None:
-                        efeatures = efeatures.squeeze(1)
+                        efeatures = [self.expansion(f_.unsqueeze(0)).squeeze(0).squeeze(-1) for f_ in features_]
+                    else:
+                        efeatures = self.expansion(features_)
                     if 'e' in run:
                         out_list.append(efeatures)
 

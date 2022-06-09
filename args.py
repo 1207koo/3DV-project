@@ -22,7 +22,7 @@ parser.add_argument("--model-config", type=str, default="./config/model_config.t
 parser.add_argument("--keypoint", type=bool, default=False, help="train keypoints only (might not work for detection only methods)")
 parser.add_argument("--matching", type=bool, default=False, help="train also matching with homography")
 parser.add_argument("--lambda-feature", type=float, default=1.0, help="lambda for feature loss")
-parser.add_argument("--lambda-score", type=float, default=1.0, help="lambda for score loss")
+parser.add_argument("--lambda-score", type=float, default=1048576.0, help="lambda for score loss")
 parser.add_argument("--lambda-matching", type=float, default=1.0, help="lambda for matching loss")
 
 parser.add_argument("--device", type=str, default="1", help="device(s) to use, cpu or number of gpus")

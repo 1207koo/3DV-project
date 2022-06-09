@@ -11,17 +11,20 @@ from args import args
 from datasets import *
 from model import *
 from util import *
-from d2_net.lib.model import D2Net
 from d2_net.lib.pyramid import process_multiscale
 from baselines import *
 
 if args.wandb:
     import wandb
-    
 
 
 if args.teacher == 'd2net':
-    teacher_model = D2Net(model_file='./d2_net/models/d2_tf.pth', use_cuda=True)
+    if args.keypoint:
+        from d2_net.lib.model_test import D2Net
+        teacher_model = D2Net(model_file='./d2_net/models/d2_tf.pth', use_relu=True, use_cuda=True)
+    else:
+        from d2_net.lib.model import D2Net
+        teacher_model = D2Net(model_file='./d2_net/models/d2_tf.pth', use_cuda=True)
 elif args.teacher == 'sift':
     teacher_model = None
 else:
@@ -36,14 +39,15 @@ train_loader = torch.utils.data.DataLoader(get_dataset('train'), batch_size=args
 val_loader = torch.utils.data.DataLoader(get_dataset('val'), batch_size=args.batch_size, shuffle=False, num_workers=min(8, os.cpu_count()))
 test_loader = torch.utils.data.DataLoader(get_dataset('test'), batch_size=args.batch_size, shuffle=False, num_workers=min(8, os.cpu_count()))
 
-optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)
+lr = args.lr
+optimizer = torch.optim.Adam(model.parameters(), lr = lr)
 length = len(train_loader)
 if args.scheduler == 'cosine':
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones * length)
 else:
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = list(np.arange(args.milestones, args.epoch, args.milestones) * length), gamma = args.gamma)
 
-epoch_tqdm = tqdm(range(args.epoch), desc='epoch')
+epoch_tqdm = tqdm(range(args.epoch), desc='epoch_tqdm')
 for epoch in epoch_tqdm:
     model.train()
 
@@ -69,15 +73,18 @@ for epoch in epoch_tqdm:
         if args.keypoint:
             feature_loss = F.mse_loss(efeatures, gt_features)
         else:
-            gt_features = teacher_model.dense_feature_extraction(img)
+            with torch.no_grad():
+                gt_features = teacher_model.dense_feature_extraction(img)
             feature_loss = F.mse_loss(F.interpolate(efeatures, size=gt_features.shape[2:], mode='bilinear', align_corners=True), gt_features)
         
         # score loss
         if args.keypoint:
             score_loss = F.binary_cross_entropy(scores, torch.ones_like(kp_scores))
         else:
-            gt_scores = teacher_model.detection(gt_features)
-            score_loss = F.mse_loss(F.interpolate(scores.unsqueeze(1), size=gt_scores.shape[1:], mode='bilinear', align_corners=True).squeeze(1), gt_scores)
+            with torch.no_grad():
+                gt_scores = teacher_model.detection(gt_features)
+            score_loss = F.binary_cross_entropy(F.interpolate(scores.unsqueeze(1), size=gt_scores.shape[1:], mode='bilinear', align_corners=True).squeeze(1), gt_scores)
+            score_loss -= F.binary_cross_entropy(gt_scores, gt_scores)
         
         # matching loss
         # TODO: homography?
@@ -85,9 +92,13 @@ for epoch in epoch_tqdm:
             raise NotImplementedError
             matching_loss = 0.0
 
-        loss = args.lambda_feature * feature_loss + args.lambda_score * score_loss
+        feature_loss *= args.lambda_feature
+        score_loss *= args.lambda_score
         if args.matching:
-            loss += args.lambda_matching * args.matching_loss
+            matching_loss *= args.lambda_matching
+        loss = feature_loss + score_loss
+        if args.matching:
+            loss += args.matching_loss
 
         loss_sum += loss.item() * img.shape[0]
         feature_loss_sum += feature_loss.item() * img.shape[0]
@@ -96,9 +107,9 @@ for epoch in epoch_tqdm:
             matching_loss_sum += matching_loss.item() * img.shape[0]
         loss_cnt += img.shape[0]
         if args.matching:
-            batch_tqdm.set_description('epoch: %03d, loss: %f, feature: %f, score: %f, matching: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt, matching_loss_sum / loss_cnt))
+            batch_tqdm.set_description('epoch%03d) loss: %f, feature: %f, score: %f, matching: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt, matching_loss_sum / loss_cnt))
         else:
-            batch_tqdm.set_description('epoch: %03d, loss: %f, feature: %f, score: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt))
+            batch_tqdm.set_description('epoch%03d) loss: %f, feature: %f, score: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt))
 
         loss.backward()
         optimizer.step()
@@ -130,18 +141,14 @@ for epoch in epoch_tqdm:
         # TODO: test code?
         with torch.no_grad():
             out_dict['test_acc'] = 0.0
-        if 'best_test_acc' not in out_dict.keys():
-            out_dict['best_test_acc'] = out_dict['test_acc']
-        elif out_dict['best_test_acc'] < out_dict['test_acc']:
-            out_dict['best_test_acc'] = out_dict['test_acc']
 
     if args.save_model != '':
         l = len(args.save_model.split('.')[-1]) + 1
         save_path = args.save_model[:-l] + '_epoch%03d'%epoch + args.save_model[-l:]
         if len(args.devices) == 1:
-            torch.save(model[k].state_dict(), save_path)
+            torch.save(model.state_dict(), save_path)
         else:
-            torch.save(model[k].module.state_dict(), save_path)
+            torch.save(model.module.state_dict(), save_path)
 
     # logging
     if args.wandb:
@@ -161,6 +168,6 @@ for epoch in epoch_tqdm:
 # final save
 if args.save_model != '':
     if len(args.devices) == 1:
-        torch.save(model[k].state_dict(), args.save_model)
+        torch.save(model.state_dict(), args.save_model)
     else:
-        torch.save(model[k].module.state_dict(), args.save_model)
+        torch.save(model.module.state_dict(), args.save_model)

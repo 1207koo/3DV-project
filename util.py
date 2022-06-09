@@ -128,8 +128,8 @@ def interpolate_dense_features(pos, dense_features, return_corners=False):
     j_bottom_right = j_bottom_right[valid_corners]
 
     ids = ids[valid_corners]
-    if ids.size(0) == 0:
-        raise EmptyTensorError
+    # if ids.size(0) == 0:
+    #     raise EmptyTensorError
 
     # Interpolation
     i = i[ids]

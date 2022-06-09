@@ -1,18 +1,27 @@
 import cv2
-from d2_net.lib.model import D2Net
+import torch
+from d2_net.lib.model_test import D2Net
 from d2_net.lib.pyramid import process_multiscale
 from SuperPointPretrainedNetwork.demo_superpoint import SuperPointFrontend
 from args import *
 
 _d2net = None
 def extract_d2net(batch, model=None):
+    b = batch.shape[0]
     if model is None and _d2net is None:
-        _d2net = D2Net(model_file='./d2_net/models/d2_tf.pth', use_cuda=True)
+        _d2net = D2Net(model_file='./d2_net/models/d2_tf.pth', use_relu=True, use_cuda=True)
+    kpts, descs = [], []
     if model is None:
-        kpt, _, des = process_multiscale(batch, _d2net, scales=[1])
+        for i in range(b):
+            kpt, _, des = process_multiscale(batch[i:i+1], _d2net, scales=[1])
+            kpts.append(kpt)
+            descs.append(des)
     else:
-        kpt, _, des = process_multiscale(batch, model, scales=[1])
-    return kpt, des
+        for i in range(b):
+            kpt, _, des = process_multiscale(batch[i:i+1], model, scales=[1])
+            kpts.append(kpt)
+            descs.append(des)
+    return kpts, descs
 
 sift = None
 def extract_sift(batch, model=None):
@@ -48,9 +57,10 @@ def extract_superpoint(batch, model=None):
 
 
 def extract_teacher(batch, model=None):
-    kpt, desc = eval('extract_%s(batch, model)'%args.teacher)
-    if type(kpt) == list:
-        kpt = torch.from_numpy(np.array(kpt)[:, ::-1]).to(args.device)
-    if type(desc) == list:
-        desc = torch.from_numpy(np.array(desc)).to(args.device)
-    return kpt, desc
+    with torch.no_grad():
+        kpt, desc = eval('extract_%s(batch, model)'%args.teacher)
+        if type(kpt[0]) != torch.Tensor:
+            kpt = [torch.from_numpy(np.array(kpt_)[:, ::-1].copy()).to(args.device) for kpt_ in kpt]
+        if type(desc[0]) != torch.Tensor:
+            desc = [torch.from_numpy(np.array(desc_)).to(args.device) for desc_ in desc]
+        return kpt, desc
