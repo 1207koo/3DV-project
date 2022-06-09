@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 def str_args(args):
     text = ''
@@ -86,12 +87,12 @@ def downscale_positions(pos, scaling_steps=0):
 def interpolate_dense_features(pos, dense_features, return_corners=False):
     device = pos.device
 
-    ids = torch.arange(0, pos.size(1), device=device)
+    ids = torch.arange(0, pos.size(0), device=device)
 
     _, h, w = dense_features.size()
 
-    i = pos[0, :]
-    j = pos[1, :]
+    i = pos[:, 0]
+    j = pos[:, 1]
 
     # Valid corners
     i_top_left = torch.floor(i).long()
@@ -148,7 +149,7 @@ def interpolate_dense_features(pos, dense_features, return_corners=False):
         w_bottom_right * dense_features[:, i_bottom_right, j_bottom_right]
     )
 
-    pos = torch.cat([i.view(1, -1), j.view(1, -1)], dim=0)
+    pos = torch.cat([i.view(-1, 1), j.view(-1, 1)], dim=1)
 
     if not return_corners:
         return [descriptors, pos, ids]
@@ -160,3 +161,12 @@ def interpolate_dense_features(pos, dense_features, return_corners=False):
             torch.stack([i_bottom_right, j_bottom_right], dim=0)
         ], dim=0)
         return [descriptors, pos, ids, corners]
+
+def interpolate(feature, size):
+    if feature.shape[-len(size):] == size:
+        return feature
+    if len(feature.shape) == 2 and len(size) == 2:
+        return F.interpolate(feature.unsqueeze(0).unsqueeze(1), size=size, mode='bilinear', align_corners=True).squeeze(1).squeeze(0)
+    if len(feature.shape) == 3 and len(size) == 2:
+        return F.interpolate(feature.unsqueeze(1), size=size, mode='bilinear', align_corners=True).squeeze(1)
+    return F.interpolate(feature, size=size, mode='bilinear', align_corners=True)

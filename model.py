@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from args import args
-from util import create_cnn, interpolate_dense_features
+from util import *
 
 class SoftDetectionModule(nn.Module):
     def __init__(self, soft_local_max_size=3):
@@ -12,10 +12,11 @@ class SoftDetectionModule(nn.Module):
         self.soft_local_max_size = soft_local_max_size
         self.pad = self.soft_local_max_size // 2
 
-    def forward(self, batch):
+    def forward(self, batch, eps=1e-12):
         b = batch.size(0)
 
-        batch = F.relu(batch)
+        # batch = F.relu(batch)
+        batch = F.softplus(batch)
 
         max_per_sample = torch.max(batch.view(b, -1), dim=1)[0]
         exp = torch.exp(batch / max_per_sample.view(b, 1, 1, 1))
@@ -120,13 +121,6 @@ class D3Net(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-
-        for m in self.detection.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
                 
         if args.model_config['expansion_nonlinear'] == 'relu':
             nl = 'relu'
@@ -143,9 +137,7 @@ class D3Net(nn.Module):
         # run = subset of 'fse', f: feature, s: score, e: expansion
         # keypoint: expansion only for given keypoints (Nx2 shape, h, w order)
         out_list = []
-        b = batch.shape[0]
-        if keypoint is not None:
-            keypoint = [kp.permute((1, 0)) / self.feature_scale - (self.feature_scale - 1) / (2 * self.feature_scale) for kp in keypoint]
+        b, _, h, w = batch.shape
         if any([c in run for c in 'fse']):
             features = self.feature(batch)
             if 'f' in run:
@@ -153,17 +145,17 @@ class D3Net(nn.Module):
             if any([c in run for c in 'se']):
                 scores = self.detection(features)
                 if keypoint is not None:
-                    scores = [interpolate_dense_features(keypoint[i], scores[i].unsqueeze(0))[0].squeeze(0) for i in range(b)]
+                    scores_ = torch.clip(interpolate(scores, (h, w)).unsqueeze(1), 0.0, 1.0)
+                    scores = [interpolate_dense_features(keypoint[i], scores_[i])[0].squeeze(0) for i in range(b)]
                 if 's' in run:
                     out_list.append(scores)
                 if any([c in run for c in 'e']): # 'e' in run
-                    features_ = features
                     if keypoint is not None:
-                        features_ = [interpolate_dense_features(keypoint[i], features[i])[0].unsqueeze(-1) for i in range(b)]
-                        # features_ = features[:, :, keypoint[0], keypoint[1]].unsqueeze(-1)
-                        efeatures = [self.expansion(f_.unsqueeze(0)).squeeze(0).squeeze(-1) for f_ in features_]
+                        features_ = interpolate(features, (h, w))
+                        features_ = [interpolate_dense_features(keypoint[i], features_[i])[0].unsqueeze(-1) for i in range(b)]
+                        efeatures = [self.expansion(f_.unsqueeze(0)).squeeze(0).squeeze(-1).permute((1, 0)).contiguous() for f_ in features_]
                     else:
-                        efeatures = self.expansion(features_)
+                        efeatures = self.expansion(features)
                     if 'e' in run:
                         out_list.append(efeatures)
 

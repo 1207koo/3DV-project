@@ -1,9 +1,12 @@
 import cv2
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from d2_net.lib.model_test import D2Net
 from d2_net.lib.pyramid import process_multiscale
 from SuperPointPretrainedNetwork.demo_superpoint import SuperPointFrontend
 from args import *
+from util import *
 
 _d2net = None
 def extract_d2net(batch, model=None):
@@ -14,12 +17,12 @@ def extract_d2net(batch, model=None):
     if model is None:
         for i in range(b):
             kpt, _, des = process_multiscale(batch[i:i+1], _d2net, scales=[1])
-            kpts.append(kpt)
+            kpts.append(kpt[:, :2])
             descs.append(des)
     else:
         for i in range(b):
             kpt, _, des = process_multiscale(batch[i:i+1], model, scales=[1])
-            kpts.append(kpt)
+            kpts.append(kpt[:, :2])
             descs.append(des)
     return kpts, descs
 
@@ -63,4 +66,6 @@ def extract_teacher(batch, model=None):
             kpt = [torch.from_numpy(np.array(kpt_)[:, ::-1].copy()).to(args.device) for kpt_ in kpt]
         if type(desc[0]) != torch.Tensor:
             desc = [torch.from_numpy(np.array(desc_)).to(args.device) for desc_ in desc]
+        if args.l2:
+            desc = [F.normalize(desc_) for desc_ in desc]
         return kpt, desc

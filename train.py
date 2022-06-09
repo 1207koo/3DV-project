@@ -25,6 +25,8 @@ if args.teacher == 'd2net':
     else:
         from d2_net.lib.model import D2Net
         teacher_model = D2Net(model_file='./d2_net/models/d2_tf.pth', use_cuda=True)
+    if len(args.devices) > 1:
+        teacher_model = torch.nn.DataParallel(teacher_model, device_ids = args.devices)
 elif args.teacher == 'sift':
     teacher_model = None
 else:
@@ -35,9 +37,9 @@ if len(args.devices) > 1:
     model = torch.nn.DataParallel(model, device_ids = args.devices)
 print('Parameter count:', num_parameter(model))
 
-train_loader = torch.utils.data.DataLoader(get_dataset('train'), batch_size=args.batch_size, shuffle=True, num_workers=min(8, os.cpu_count()))
-val_loader = torch.utils.data.DataLoader(get_dataset('val'), batch_size=args.batch_size, shuffle=False, num_workers=min(8, os.cpu_count()))
-test_loader = torch.utils.data.DataLoader(get_dataset('test'), batch_size=args.batch_size, shuffle=False, num_workers=min(8, os.cpu_count()))
+train_loader = torch.utils.data.DataLoader(get_dataset('train'), batch_size=args.batch_size, shuffle=True, num_workers=min(args.num_workers, os.cpu_count()), pin_memory=True)
+# val_loader = torch.utils.data.DataLoader(get_dataset('val'), batch_size=args.batch_size, shuffle=False, num_workers=min(args.num_workers, os.cpu_count()), pin_memory=True)
+# test_loader = torch.utils.data.DataLoader(get_dataset('test'), batch_size=args.batch_size, shuffle=False, num_workers=min(args.num_workers, os.cpu_count()), pin_memory=True)
 
 lr = args.lr
 optimizer = torch.optim.Adam(model.parameters(), lr = lr)
@@ -59,31 +61,45 @@ for epoch in epoch_tqdm:
 
     batch_tqdm = tqdm(train_loader, desc='batch', leave=False)
     for img in batch_tqdm:
-        img = img.to(args.device)
+        b = img.shape[0]
+        img = img.to(args.device, non_blocking=True)
         optimizer.zero_grad()
 
         # forward
         if args.keypoint:
-            gt_keypoints, gt_descriptors = extract_teacher(img, teacher_model)
+            gt_keypoints, gt_features = extract_teacher(img, teacher_model)
             features, scores, efeatures = model(img, keypoint=gt_keypoints)
         else:
             features, scores, efeatures = model(img)
 
         # feature loss
         if args.keypoint:
-            feature_loss = F.mse_loss(efeatures, gt_features)
+            if args.l2:
+                feature_loss = torch.stack([F.mse_loss(F.normalize(efeatures[i]), F.normalize(gt_features[i])) for i in range(b)], dim=0).mean()
+            else:
+                feature_loss = torch.stack([F.mse_loss(efeatures[i], gt_features[i]) for i in range(b)], dim=0).mean()
         else:
             with torch.no_grad():
-                gt_features = teacher_model.dense_feature_extraction(img)
-            feature_loss = F.mse_loss(F.interpolate(efeatures, size=gt_features.shape[2:], mode='bilinear', align_corners=True), gt_features)
+                if len(args.devices) > 1:
+                    gt_features = teacher_model.module.dense_feature_extraction(img)
+                else:
+                    gt_features = teacher_model.dense_feature_extraction(img)
+            if args.l2:
+                feature_loss = F.mse_loss(F.normalize(interpolate(efeatures, gt_features.shape[2:])), F.normalize(gt_features))
+            else:
+                feature_loss = F.mse_loss(interpolate(efeatures, gt_features.shape[2:]), gt_features)
         
         # score loss
         if args.keypoint:
-            score_loss = F.binary_cross_entropy(scores, torch.ones_like(kp_scores))
+            gt_scores = [torch.ones_like(scores[i]) / scores[i].shape[0] for i in range(b)]
+            score_loss = torch.stack([F.binary_cross_entropy(scores[i], gt_scores[i]) - F.binary_cross_entropy(gt_scores[i], gt_scores[i]) for i in range(b)], dim=0).mean()
         else:
             with torch.no_grad():
-                gt_scores = teacher_model.detection(gt_features)
-            score_loss = F.binary_cross_entropy(F.interpolate(scores.unsqueeze(1), size=gt_scores.shape[1:], mode='bilinear', align_corners=True).squeeze(1), gt_scores)
+                if len(args.devices) > 1:
+                    gt_scores = teacher_model.module.detection(gt_features)
+                else:
+                    gt_scores = teacher_model.detection(gt_features)
+            score_loss = F.binary_cross_entropy(interpolate(scores, gt_scores.shape[1:]), gt_scores)
             score_loss -= F.binary_cross_entropy(gt_scores, gt_scores)
         
         # matching loss
