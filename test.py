@@ -25,6 +25,8 @@ n_i = 52
 n_v = 56
 
 dataset_path = 'hpatches-sequences-release'
+if not os.path.isdir(dataset_path):
+    dataset_path = 'd2_net/hpatches-sequences/hpatches-sequences-release'
 
 lim = [1, 15]
 rng = np.arange(lim[0], lim[1] + 1)
