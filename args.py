@@ -7,7 +7,7 @@ from util import str_args, config_parse
 
 parser = argparse.ArgumentParser(description='3D vision project parser!')
 
-parser.add_argument("--dim", type=int, default=64, help="descriptor dimension")
+parser.add_argument("--dim", type=int, default=32, help="descriptor dimension")
 parser.add_argument("--teacher", type=str, default="d2net", help="teacher model")
 parser.add_argument("--original-dim", type=int, default=-1, help="descriptor dimension of teacher model (512 for D2-Net, -1 for default)")
 parser.add_argument("--l2", type=bool, default=True, help="normalize feature L2=1")
@@ -17,6 +17,7 @@ parser.add_argument("--epoch", type=int, default=100, help="total epoch")
 parser.add_argument("--lr", type=float, default=0.1, help="learning rate")
 parser.add_argument("--milestones", type=int, default=10, help="milestones for lr scheduler")
 parser.add_argument("--gamma", type=float, default=0.9, help="gamma for lr scheduler")
+parser.add_argument("--optimizer", type=str, default="adam", help="optimizer (adam, sgd)")
 parser.add_argument("--scheduler", type=str, default="cosine", help="lr scheduler (cosine, multistep)")
 parser.add_argument("--model-config", type=str, default="./config/model_config.txt", help="model config")
 

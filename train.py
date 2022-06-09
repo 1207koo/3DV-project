@@ -51,12 +51,19 @@ train_loader = torch.utils.data.DataLoader(get_dataset('train'), batch_size=args
 # test_loader = torch.utils.data.DataLoader(get_dataset('test'), batch_size=args.batch_size, shuffle=False, num_workers=min(args.num_workers, os.cpu_count()), pin_memory=True)
 
 lr = args.lr
-optimizer = torch.optim.Adam(model.parameters(), lr = lr)
 length = len(train_loader)
+if args.optimizer == 'adam':
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+elif args.optimizer == 'sgd':
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+else:
+    raise NotImplementedError
 if args.scheduler == 'cosine':
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones * length)
-else:
+elif args.scheduler == 'multistep':
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = list(np.arange(args.milestones, args.epoch, args.milestones) * length), gamma = args.gamma)
+else:
+    raise NotImplementedError
 
 epoch_tqdm = tqdm(range(args.epoch), desc='epoch_tqdm')
 for epoch in epoch_tqdm:
@@ -197,6 +204,12 @@ for epoch in epoch_tqdm:
     # update scheduler
     if (epoch + 1) % args.milestones == 0 and args.scheduler == 'cosine':
         lr *= args.gamma
+        if args.optimizer == 'adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        elif args.optimizer == 'sgd':
+            optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+        else:
+            raise NotImplementedError
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones * length)
 
 # final save
