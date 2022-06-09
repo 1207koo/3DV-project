@@ -10,6 +10,7 @@ from util import *
 
 _d2net = None
 def extract_d2net(batch, model=None):
+    global _d2net
     b = batch.shape[0]
     if model is None and _d2net is None:
         _d2net = D2Net(model_file='./d2_net/models/d2_tf.pth', use_relu=True, use_cuda=True)
@@ -28,6 +29,7 @@ def extract_d2net(batch, model=None):
 
 sift = None
 def extract_sift(batch, model=None):
+    global sift
     if sift is None:
         sift = cv2.xfeatures2d.SIFT_create()
     kpts, dess = [], []
@@ -39,6 +41,7 @@ def extract_sift(batch, model=None):
 
 orb = None
 def extract_orb(batch, model=None):
+    global orb
     if orb is None:
         orb = cv2.ORB_create()
     kpts, dess = [], []
@@ -50,6 +53,7 @@ def extract_orb(batch, model=None):
 
 _superpoint = None
 def extract_superpoint(batch, model=None):
+    global _superpoint
     if model is None and _superpoint is None:
         _superpoint = SuperPointFrontend('./SuperPointPretrainedNetwork/superpoint_v1.pth', 4, 0.015, 0.7, True)
     if model is None:

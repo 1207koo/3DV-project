@@ -11,7 +11,6 @@ from args import args
 from datasets import *
 from model import *
 from util import *
-from d2_net.lib.pyramid import process_multiscale
 from baselines import *
 
 if args.wandb:
@@ -123,9 +122,9 @@ for epoch in epoch_tqdm:
             matching_loss_sum += matching_loss.item() * img.shape[0]
         loss_cnt += img.shape[0]
         if args.matching:
-            batch_tqdm.set_description('epoch%03d) loss: %f, feature: %f, score: %f, matching: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt, matching_loss_sum / loss_cnt))
+            batch_tqdm.set_description('epoch%03d > loss: %f, feature: %f, score: %f, matching: %f, lr: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt, matching_loss_sum / loss_cnt, float(scheduler.get_last_lr()[0])))
         else:
-            batch_tqdm.set_description('epoch%03d) loss: %f, feature: %f, score: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt))
+            batch_tqdm.set_description('epoch%03d > loss: %f, feature: %f, score: %f, lr: %f'%(epoch, loss_sum / loss_cnt, feature_loss_sum / loss_cnt, score_loss_sum / loss_cnt, float(scheduler.get_last_lr()[0])))
 
         loss.backward()
         optimizer.step()
@@ -167,14 +166,14 @@ for epoch in epoch_tqdm:
             torch.save(model.module.state_dict(), save_path)
 
     # logging
-    if args.wandb:
-        wandb.log(out_dict)
     text = ''
     for k, v in out_dict.items():
         if text != '':
             text += ', '
         text += '%s: %s'%(str(k), str(v))
     epoch_tqdm.write(text)
+    if args.wandb:
+        wandb.log(out_dict)
 
     # update scheduler
     if (epoch + 1) % args.milestones == 0 and args.scheduler == 'cosine':

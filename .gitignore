@@ -14,3 +14,4 @@ d2_net/vlfeat
 d2_net/*.d2-net
 
 save
+wandb
