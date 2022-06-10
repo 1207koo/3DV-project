@@ -2,6 +2,8 @@ import argparse
 import os
 
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
 
 import imageio
 
@@ -31,7 +33,21 @@ OUTPUT_TYPE = 'npz'
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True):
+def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True, remove_only=False):
+    assert len(output_extension) > 0
+    seq_file = './d2_net/image_list_hpatches_sequences.txt'
+    if not os.path.isfile(seq_file):
+        seq_file = './image_list_hpatches_sequences.txt'
+    with open(seq_file, 'r') as f:
+        lines = f.readlines()
+    if remove_only:
+        for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
+            if not os.path.isfile(line.strip()):
+                path = os.path.join('d2_net', line.strip())
+            else:
+                path = line.strip()
+            if os.path.isfile(path + output_extension):
+                os.system('rm -rf %s'%(path + output_extension))
     # Creating CNN model
     if output_extension == '.d2-net':
         model = D2Net(
@@ -45,11 +61,6 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True)
         model = cv2.SIFT_create()
 
     # Process the file
-    seq_file = './d2_net/image_list_hpatches_sequences.txt'
-    if not os.path.isfile(seq_file):
-        seq_file = './image_list_hpatches_sequences.txt'
-    with open('./d2_net/image_list_hpatches_sequences.txt', 'r') as f:
-        lines = f.readlines()
     if output_extension[-5:] == '_auto':
         for i in range(100):
             p = True

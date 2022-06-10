@@ -7,7 +7,7 @@ from util import str_args, config_parse
 
 parser = argparse.ArgumentParser(description='3D vision project parser!')
 
-parser.add_argument("--dim", type=int, default=32, help="descriptor dimension")
+parser.add_argument("--dim", type=int, default=64, help="descriptor dimension")
 parser.add_argument("--teacher", type=str, default="d2net", help="teacher model")
 parser.add_argument("--original-dim", type=int, default=-1, help="descriptor dimension of teacher model (512 for D2-Net, -1 for default)")
 parser.add_argument("--l2", type=bool, default=True, help="normalize feature L2=1")

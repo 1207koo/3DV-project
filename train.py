@@ -110,7 +110,9 @@ for epoch in epoch_tqdm:
                     gt_scores = teacher_model.module.detection(gt_features)
                 else:
                     gt_scores = teacher_model.detection(gt_features)
-            score_loss = F.binary_cross_entropy(interpolate(scores, gt_scores.shape[1:]), gt_scores)
+            iscores = torch.clip(interpolate(scores, gt_scores.shape[1:]), 0, 1)
+            gt_scores = torch.clip(gt_scores, 0, 1)
+            score_loss = F.binary_cross_entropy(iscores, gt_scores)
             score_loss -= F.binary_cross_entropy(gt_scores, gt_scores)
         
         # matching loss
@@ -160,6 +162,7 @@ for epoch in epoch_tqdm:
         with torch.no_grad():
             out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
             out_dict['val_matches'], out_dict['val_time'] = test(out_ext[1:], verbose=False)
+            extract(model, out_ext, exist_ok=False, verbose=False, remove_only=True)
             if not D2_DONE:
                 extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
@@ -171,7 +174,7 @@ for epoch in epoch_tqdm:
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
         out_dict['val_d2net_time'] = test_dict['d2net_time']
         out_dict['val_sift_matches'] = test_dict['sift_matches']
-        out_dict['val_d2net_time'] = test_dict['d2net_time']
+        out_dict['val_sift_time'] = test_dict['sift_time']
         if 'best_val_matches' not in test_dict.keys() or test_dict['best_val_matches'] < out_dict['val_matches']:
             test_dict['best_val_matches'] = out_dict['val_matches']
         out_dict['best_val_matches'] = test_dict['best_val_matches']
@@ -181,6 +184,7 @@ for epoch in epoch_tqdm:
         with torch.no_grad():
             out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
             out_dict['test_matches'], out_dict['test_time'] = test(out_ext[1:], verbose=True)
+            extract(model, out_ext, exist_ok=False, verbose=False, remove_only=True)
             if not D2_DONE:
                 extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
