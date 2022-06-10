@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import os
-
+import time
 import torch
 
 from scipy.io import loadmat
 
 from tqdm import tqdm
+
 
 use_cuda = torch.cuda.is_available()
 device = torch.device('cuda:0' if use_cuda else 'cpu')
@@ -148,11 +149,17 @@ def test(method, verbose=True):
             read_function = generate_read_function(method, extension='png')
         else:
             read_function = generate_read_function(method)
+    
+    elapsed = 0.
     if False:#os.path.exists(output_file):
         if verbose:
             print('Loading precomputed errors...')
+        st = time.time()
         errors[method] = np.load(output_file, allow_pickle=True)
+        elapsed = time.time() - st
     else:
+        st = time.time()
         errors[method] = benchmark_features(read_function, verbose=verbose)
+        elapsed = time.time() - st
         np.save(output_file, errors[method])
-    return summary(errors[method][-1], verbose=verbose)
+    return summary(errors[method][-1], verbose=verbose), elapsed

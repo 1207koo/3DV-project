@@ -158,17 +158,17 @@ for epoch in epoch_tqdm:
         with torch.no_grad():
             if not SIFT_DONE:
                 extract(None, '.sift')
-                test_dict['sift_matches'] = test('sift', verbose=False)
+                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
             if not D2_DONE:
                 extract(None, '.d2-net')
-                test_dict['d2net_matches'] = test('d2-net', verbose=False)
+                test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
         out_dict['val_sift_matches'] = test_dict['d2net_matches']
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
         with torch.no_grad():
             extract(model, '.ours')
-            out_dict['val_matches'] = test('ours', verbose=False)
+            out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
         if 'best_val_matches' not in out_dict.keys() or out_dict['best_val_matches'] < out_dict['val_matches']:
             out_dict['best_val_matches'] = out_dict['val_matches']
     # test
@@ -177,17 +177,17 @@ for epoch in epoch_tqdm:
         with torch.no_grad():
             if not SIFT_DONE:
                 extract(None, '.sift')
-                test_dict['sift_matches'] = test('sift', verbose=False)
+                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
             if not D2_DONE:
                 extract(None, '.d2-net')
-                test_dict['d2net_matches'] = test('d2-net', verbose=False)
+                test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
-        out_dict['test_sift_matches'] = test_dict['d2net_matches']
+        out_dict['test_sift_matches'] = test_dict['sift_matches']
         out_dict['test_d2net_matches'] = test_dict['d2net_matches']
         with torch.no_grad():
             extract(model, '.ours')
-            out_dict['test_matches'] = test('ours', verbose=True)
+            out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)
 
     if args.save_model != '':
         l = len(args.save_model.split('.')[-1]) + 1
