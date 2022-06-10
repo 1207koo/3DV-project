@@ -59,8 +59,6 @@ class HardDetectionModule(nn.Module):
         b, c, h, w = batch.size()
         device = batch.device
 
-        batch = F.softplus(batch)
-
         depth_wise_max = torch.max(batch, dim=1)[0]
         is_depth_wise_max = (batch == depth_wise_max)
         del depth_wise_max
@@ -84,7 +82,7 @@ class HardDetectionModule(nn.Module):
         del dii, dij, djj
 
         threshold = (self.edge_threshold + 1) ** 2 / self.edge_threshold
-        is_not_edge = torch.min(tr * tr / det <= threshold, det > 0)
+        is_not_edge = torch.min(tr * tr <= threshold * det, det > 0)
 
         detected = torch.min(
             is_depth_wise_max,
