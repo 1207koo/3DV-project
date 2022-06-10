@@ -158,42 +158,40 @@ for epoch in epoch_tqdm:
     if (epoch + 1) % args.test_every == 0:
         model.eval()
         with torch.no_grad():
+            extract(model, '.ours', verbose=False)
+            out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
             if not D2_DONE:
-                extract(None, '.d2-net')
+                extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
             if not SIFT_DONE:
-                extract(None, '.sift')
+                extract(None, '.sift', verbose=False)
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
         out_dict['val_d2net_time'] = test_dict['d2net_time']
         out_dict['val_sift_matches'] = test_dict['sift_matches']
         out_dict['val_d2net_time'] = test_dict['d2net_time']
-        with torch.no_grad():
-            extract(model, '.ours')
-            out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
         if 'best_val_matches' not in out_dict.keys() or out_dict['best_val_matches'] < out_dict['val_matches']:
             out_dict['best_val_matches'] = out_dict['val_matches']
     # test
     if (epoch + 1) == args.epoch:
         model.eval()
         with torch.no_grad():
+            extract(model, '.ours', verbose=False)
+            out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)
             if not D2_DONE:
-                extract(None, '.d2-net')
+                extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
             if not SIFT_DONE:
-                extract(None, '.sift')
+                extract(None, '.sift', verbose=False)
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
         out_dict['test_d2net_matches'] = test_dict['d2net_matches']
         out_dict['test_d2net_time'] = test_dict['d2net_time']
         out_dict['test_sift_matches'] = test_dict['sift_matches']
         out_dict['test_sift_time'] = test_dict['sift_time']
-        with torch.no_grad():
-            extract(model, '.ours')
-            out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)
 
     if args.save_model != '':
         l = len(args.save_model.split('.')[-1]) + 1

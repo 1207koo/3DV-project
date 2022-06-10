@@ -243,7 +243,7 @@ def process_multiscale_d3(image, model, scales=[.5, 1, 2]):
 
         try:
             raw_descriptors, _, ids = interpolate_dense_features(
-                fmap_keypoints.to(device),
+                fmap_keypoints.t().to(device),
                 dense_features[0]
             )
         except EmptyTensorError:
@@ -252,7 +252,8 @@ def process_multiscale_d3(image, model, scales=[.5, 1, 2]):
         fmap_keypoints = fmap_keypoints[:, ids]
         del ids
 
-        keypoints = upscale_positions(fmap_keypoints, scaling_steps=2)
+        # TODO: auto scaling?
+        keypoints = upscale_positions(fmap_keypoints, scaling_steps=3)
         del fmap_keypoints
 
         descriptors = F.normalize(raw_descriptors, dim=0).cpu()
