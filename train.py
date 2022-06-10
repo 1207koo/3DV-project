@@ -72,7 +72,6 @@ for epoch in epoch_tqdm:
 
     batch_tqdm = tqdm(train_loader, desc='batch', leave=False)
     for img in batch_tqdm:
-        break
         b = img.shape[0]
         img = img.to(args.device, non_blocking=True)
         optimizer.zero_grad()
