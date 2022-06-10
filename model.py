@@ -200,28 +200,35 @@ class D3Net(nn.Module):
             run = 'fse'
         if run == 'test':
             run = 'tfsd'
+        need = run
+        if any([c in run for c in 'sed']):
+            need += 'f'
 
-        features = self.feature(batch)
-        out_dict['f'] = features
+        if 'f' in need:
+            features = self.feature(batch)
+            out_dict['f'] = features
         
-        if 't' in run:
-            scores = self.detection_hard(features)
-        else:
-            scores = self.detection(features)
-        if keypoint is not None:
-            scores_ = torch.clip(interpolate(scores, (h, w)).unsqueeze(1), 0.0, 1.0)
-            scores = [interpolate_dense_features(keypoint[i], scores_[i])[0].squeeze(0) for i in range(b)]
-        out_dict['s'] = scores
+        if 's' in need:
+            if 't' in run:
+                scores = self.detection_hard(features)
+            else:
+                scores = self.detection(features)
+            if keypoint is not None:
+                scores_ = torch.clip(interpolate(scores, (h, w)).unsqueeze(1), 0.0, 1.0)
+                scores = [interpolate_dense_features(keypoint[i], scores_[i])[0].squeeze(0) for i in range(b)]
+            out_dict['s'] = scores
 
-        if keypoint is not None:
-            features_ = interpolate(features, (h, w))
-            features_ = [interpolate_dense_features(keypoint[i], features_[i])[0].unsqueeze(-1) for i in range(b)]
-            efeatures = [self.expansion(f_.unsqueeze(0)).squeeze(0).squeeze(-1).permute((1, 0)).contiguous() for f_ in features_]
-        else:
-            efeatures = self.expansion(features)
-        out_dict['e'] = efeatures
+        if 'e' in need:
+            if keypoint is not None:
+                features_ = interpolate(features, (h, w))
+                features_ = [interpolate_dense_features(keypoint[i], features_[i])[0].unsqueeze(-1) for i in range(b)]
+                efeatures = [self.expansion(f_.unsqueeze(0)).squeeze(0).squeeze(-1).permute((1, 0)).contiguous() for f_ in features_]
+            else:
+                efeatures = self.expansion(features)
+            out_dict['e'] = efeatures
 
-        out_dict['d'] = self.localization(features)
+        if 'd' in need:
+            out_dict['d'] = self.localization(features)
 
         for c in run:
             if c in out_dict.keys():

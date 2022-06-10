@@ -31,7 +31,7 @@ OUTPUT_TYPE = 'npz'
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-def extract(model=None, output_extension='.d2-net', verbose=True):
+def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True):
     # Creating CNN model
     if output_extension == '.d2-net':
         model = D2Net(
@@ -39,7 +39,7 @@ def extract(model=None, output_extension='.d2-net', verbose=True):
             use_relu=USE_RELU,
             use_cuda=use_cuda
         )
-    elif output_extension == '.ours':
+    elif output_extension[:5] == '.ours':
         assert model is not None, "specify the model"
     else:
         model = cv2.SIFT_create()
@@ -50,7 +50,19 @@ def extract(model=None, output_extension='.d2-net', verbose=True):
         seq_file = './image_list_hpatches_sequences.txt'
     with open('./d2_net/image_list_hpatches_sequences.txt', 'r') as f:
         lines = f.readlines()
+    if output_extension[-5:] == '_auto':
+        for i in range(100):
+            p = True
+            for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
+                if os.path.isfile(path + output_extension.replace('_auto', str(i))):
+                    p = False
+                    break
+            if p:
+                output_extension = output_extension.replace('_auto', str(i))
+                break
     for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
+        if os.path.isfile(path + output_extension) and exist_ok:
+            continue
         if not os.path.isfile(line.strip()):
             path = os.path.join('d2_net', line.strip())
         else:
@@ -86,7 +98,7 @@ def extract(model=None, output_extension='.d2-net', verbose=True):
             keypoints, descriptors =  model.detectAndCompute(image, None)
             keypoints = np.asarray([[*kp.pt, 1] for kp in keypoints])
             scores = np.zeros(len(keypoints))
-        elif output_extension == '.ours':
+        elif output_extension[:5] == '.ours':
             with torch.no_grad():
                 if MULTISCALE:
                     keypoints, scores, descriptors = process_multiscale_d3(
@@ -157,4 +169,6 @@ def extract(model=None, output_extension='.d2-net', verbose=True):
                 )
         else:
             raise ValueError('Unknown output type.')
+    
+    return output_extension
 

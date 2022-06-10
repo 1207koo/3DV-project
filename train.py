@@ -158,8 +158,8 @@ for epoch in epoch_tqdm:
     if (epoch + 1) % args.test_every == 0:
         model.eval()
         with torch.no_grad():
-            extract(model, '.ours', verbose=False)
-            out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
+            out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
+            out_dict['val_matches'], out_dict['val_time'] = test(out_ext[1:], verbose=False)
             if not D2_DONE:
                 extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
@@ -172,14 +172,15 @@ for epoch in epoch_tqdm:
         out_dict['val_d2net_time'] = test_dict['d2net_time']
         out_dict['val_sift_matches'] = test_dict['sift_matches']
         out_dict['val_d2net_time'] = test_dict['d2net_time']
-        if 'best_val_matches' not in out_dict.keys() or out_dict['best_val_matches'] < out_dict['val_matches']:
-            out_dict['best_val_matches'] = out_dict['val_matches']
+        if 'best_val_matches' not in test_dict.keys() or test_dict['best_val_matches'] < out_dict['val_matches']:
+            test_dict['best_val_matches'] = out_dict['val_matches']
+        out_dict['best_val_matches'] = test_dict['best_val_matches']
     # test
     if (epoch + 1) == args.epoch:
         model.eval()
         with torch.no_grad():
-            extract(model, '.ours', verbose=False)
-            out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)
+            out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
+            out_dict['test_matches'], out_dict['test_time'] = test(out_ext[1:], verbose=True)
             if not D2_DONE:
                 extract(None, '.d2-net', verbose=False)
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
