@@ -12,7 +12,7 @@ from datasets import *
 from model import *
 from util import *
 from baselines import *
-from test import test
+from test import test, savefigs
 from d2_net.extract_features import extract
 
 if args.wandb:
@@ -72,6 +72,7 @@ for epoch in epoch_tqdm:
 
     batch_tqdm = tqdm(train_loader, desc='batch', leave=False)
     for img in batch_tqdm:
+        break
         b = img.shape[0]
         img = img.to(args.device, non_blocking=True)
         optimizer.zero_grad()
@@ -170,6 +171,7 @@ for epoch in epoch_tqdm:
                 extract(None, '.sift', verbose=False)
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
+            savefigs(epoch)
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
         out_dict['val_d2net_time'] = test_dict['d2net_time']
         out_dict['val_sift_matches'] = test_dict['sift_matches']
@@ -192,6 +194,7 @@ for epoch in epoch_tqdm:
                 extract(None, '.sift', verbose=False)
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
+            savefigs(epoch)
         out_dict['test_d2net_matches'] = test_dict['d2net_matches']
         out_dict['test_d2net_time'] = test_dict['d2net_time']
         out_dict['test_sift_matches'] = test_dict['sift_matches']

@@ -1,3 +1,4 @@
+from copyreg import pickle
 import matplotlib
 
 import matplotlib.pyplot as plt
@@ -6,6 +7,7 @@ import numpy as np
 
 import os
 import time
+import pickle
 import torch
 
 from scipy.io import loadmat
@@ -165,3 +167,57 @@ def test(method, verbose=True):
         elapsed = time.time() - st
         np.save(output_file, errors[method])
     return summary(errors[method][-1], verbose=verbose), elapsed
+
+def savefigs(epoch):
+    colors = ['orange', 'red', 'blue', 'brown', 'purple', 'green']
+    plt_lim = [1, 10]
+    plt_rng = np.arange(plt_lim[0], plt_lim[1] + 1)
+    plt.rc('axes', titlesize=25)
+    plt.rc('axes', labelsize=25)
+
+    plt.figure(figsize=(15, 5))
+
+    plt.subplot(1, 3, 1)
+    for method,  color, in zip(errors.keys(),colors):
+        i_err, v_err, _ = errors[method]
+        plt.plot(plt_rng, [(i_err[thr] + v_err[thr]) / ((n_i + n_v) * 5) for thr in plt_rng], color=color, linewidth=3, label=method)
+    plt.title('Overall')
+    plt.xlim(plt_lim)
+    plt.xticks(plt_rng)
+    plt.ylabel('MMA')
+    plt.ylim([0, 1])
+    plt.grid()
+    plt.tick_params(axis='both', which='major', labelsize=20)
+    plt.legend()
+
+    plt.subplot(1, 3, 2)
+    for method,  color, in zip(errors.keys(),colors):
+        i_err, v_err, _ = errors[method]
+        plt.plot(plt_rng, [i_err[thr] / (n_i * 5) for thr in plt_rng], color=color, linewidth=3, label=method)
+    plt.title('Illumination')
+    plt.xlabel('threshold [px]')
+    plt.xlim(plt_lim)
+    plt.xticks(plt_rng)
+    plt.ylim([0, 1])
+    plt.gca().axes.set_yticklabels([])
+    plt.grid()
+    plt.tick_params(axis='both', which='major', labelsize=20)
+
+    plt.subplot(1, 3, 3)
+    for method, color in zip(errors.keys(), colors,):
+        i_err, v_err, _ = errors[method]
+        plt.plot(plt_rng, [v_err[thr] / (n_v * 5) for thr in plt_rng], color=color, linewidth=3, label=method)
+    plt.title('Viewpoint')
+    plt.xlim(plt_lim)
+    plt.xticks(plt_rng)
+    plt.ylim([0, 1])
+    plt.gca().axes.set_yticklabels([])
+    plt.grid()
+    plt.tick_params(axis='both', which='major', labelsize=20)
+
+    if top_k is None:
+        plt.savefig(os.path.join('cache', 'hseq_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
+    else:
+        plt.savefig(os.path.join('cache', 'hseq-top_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
+    with open(os.path.join('cache', 'errors_epc{}.pkl'.format(epoch)), 'wb') as f:
+        pickle.dump(errors, f)
