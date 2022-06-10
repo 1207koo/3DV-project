@@ -14,6 +14,8 @@ from scipy.io import loadmat
 
 from tqdm import tqdm
 
+from args import args
+
 
 use_cuda = torch.cuda.is_available()
 device = torch.device('cuda:0' if use_cuda else 'cpu')
@@ -215,9 +217,10 @@ def savefigs(epoch):
     plt.grid()
     plt.tick_params(axis='both', which='major', labelsize=20)
 
+    save_dir = os.path.dirname(args.save_model)
     if top_k is None:
-        plt.savefig(os.path.join('cache', 'hseq_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(save_dir, 'hseq_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
     else:
-        plt.savefig(os.path.join('cache', 'hseq-top_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
-    with open(os.path.join('cache', 'errors_epc{}.pkl'.format(epoch)), 'wb') as f:
+        plt.savefig(os.path.join(save_dir, 'hseq-top_epc{}.pdf'.format(epoch)), bbox_inches='tight', dpi=300)
+    with open(os.path.join(save_dir, 'errors_epc{}.pkl'.format(epoch)), 'wb') as f:
         pickle.dump(errors, f)
