@@ -110,10 +110,9 @@ for epoch in epoch_tqdm:
                     gt_scores = teacher_model.module.detection(gt_features)
                 else:
                     gt_scores = teacher_model.detection(gt_features)
-            iscores = torch.clip(interpolate(scores, gt_scores.shape[1:]), 0, 1)
+            iscores = interpolate(scores, gt_scores.shape[1:])
             gt_scores = torch.clip(gt_scores, 0, 1)
-            score_loss = F.binary_cross_entropy(iscores, gt_scores)
-            score_loss -= F.binary_cross_entropy(gt_scores, gt_scores)
+            score_loss = F.binary_cross_entropy(iscores, gt_scores) - F.binary_cross_entropy(gt_scores, gt_scores)
         
         # matching loss
         # TODO: homography?

@@ -48,6 +48,7 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
                 path = line.strip()
             if os.path.isfile(path + output_extension):
                 os.system('rm -rf %s'%(path + output_extension))
+        os.system('rm -rf %s'%os.path.join('cache/ours', 'check'+output_extension))
         return output_extension
     # Creating CNN model
     if output_extension == '.d2-net':
@@ -63,18 +64,12 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
 
     # Process the file
     if output_extension[-5:] == '_auto':
-        for i in range(100):
-            p = True
-            for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
-                if not os.path.isfile(line.strip()):
-                    path = os.path.join('d2_net', line.strip())
-                else:
-                    path = line.strip()
-                if os.path.isfile(path + output_extension.replace('_auto', str(i))):
-                    p = False
-                    break
-            if p:
+        os.makedirs('cache/ours', exist_ok=True)
+        for i in range(1000):
+            if not os.path.isfile(os.path.join('cache/ours', 'check'+output_extension.replace('_auto', str(i)))):
                 output_extension = output_extension.replace('_auto', str(i))
+                with open(os.path.join('cache/ours', 'check'+output_extension), 'w') as f:
+                    f.write('')
                 break
     for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
         if not os.path.isfile(line.strip()):

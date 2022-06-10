@@ -19,23 +19,23 @@ class SoftDetectionModule(nn.Module):
         batch = F.softplus(batch)
 
         max_per_sample = torch.max(batch.view(b, -1), dim=1)[0]
-        exp = torch.exp(batch / max_per_sample.view(b, 1, 1, 1))
+        exp = torch.exp(batch / torch.clip(max_per_sample.view(b, 1, 1, 1), eps))
         sum_exp = (
-            self.soft_local_max_size ** 2 *
+            (self.soft_local_max_size ** 2) *
             F.avg_pool2d(
                 F.pad(exp, [self.pad] * 4, mode='constant', value=1.),
                 self.soft_local_max_size, stride=1
             )
         )
-        local_max_score = exp / sum_exp
+        local_max_score = exp / torch.clip(sum_exp, eps)
 
         depth_wise_max = torch.max(batch, dim=1)[0]
-        depth_wise_max_score = batch / depth_wise_max.unsqueeze(1)
+        depth_wise_max_score = batch / torch.clip(depth_wise_max.unsqueeze(1), eps)
 
         all_scores = local_max_score * depth_wise_max_score
         score = torch.max(all_scores, dim=1)[0]
 
-        score = score / torch.sum(score.view(b, -1), dim=1).view(b, 1, 1)
+        score = score / torch.clip(torch.sum(score.view(b, -1), dim=1).view(b, 1, 1), eps)
 
         return score
 
