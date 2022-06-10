@@ -18,8 +18,8 @@ from d2_net.extract_features import extract
 if args.wandb:
     import wandb
 
-SIFT_DONE = False
 D2_DONE = False
+SIFT_DONE = False
 test_dict = {}
 
 if args.teacher == 'd2net':
@@ -71,7 +71,7 @@ for epoch in epoch_tqdm:
     loss_cnt = 0
 
     batch_tqdm = tqdm(train_loader, desc='batch', leave=False)
-    for img in batch_tqdm:
+    for img in range(0):
         b = img.shape[0]
         img = img.to(args.device, non_blocking=True)
         optimizer.zero_grad()
@@ -146,6 +146,8 @@ for epoch in epoch_tqdm:
     # results
     out_dict = OrderedDict()
     out_dict['epoch'] = epoch
+    if loss_cnt == 0:
+        loss_cnt = 1
     out_dict['loss'] = loss_sum / loss_cnt
     out_dict['feature_loss'] = feature_loss_sum / loss_cnt
     out_dict['score_loss'] = score_loss_sum / loss_cnt
@@ -156,16 +158,16 @@ for epoch in epoch_tqdm:
     if (epoch + 1) % args.test_every == 0:
         model.eval()
         with torch.no_grad():
-            if not SIFT_DONE:
-                extract(None, '.sift')
-                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
-                SIFT_DONE = True
             if not D2_DONE:
                 extract(None, '.d2-net')
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
-        out_dict['val_sift_matches'] = test_dict['d2net_matches']
+            if not SIFT_DONE:
+                extract(None, '.sift')
+                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
+                SIFT_DONE = True
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
+        out_dict['val_sift_matches'] = test_dict['sift_matches']
         with torch.no_grad():
             extract(model, '.ours')
             out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
@@ -175,16 +177,16 @@ for epoch in epoch_tqdm:
     if (epoch + 1) == args.epoch:
         model.eval()
         with torch.no_grad():
-            if not SIFT_DONE:
-                extract(None, '.sift')
-                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
-                SIFT_DONE = True
             if not D2_DONE:
                 extract(None, '.d2-net')
                 test_dict['d2net_matches'], test_dict['d2net_time'] = test('d2-net', verbose=False)
                 D2_DONE = True
-        out_dict['test_sift_matches'] = test_dict['sift_matches']
+            if not SIFT_DONE:
+                extract(None, '.sift')
+                test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
+                SIFT_DONE = True
         out_dict['test_d2net_matches'] = test_dict['d2net_matches']
+        out_dict['test_sift_matches'] = test_dict['sift_matches']
         with torch.no_grad():
             extract(model, '.ours')
             out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)

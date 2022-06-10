@@ -17,8 +17,9 @@ import scipy.misc
 from .lib.model_test import D2Net
 from .lib.utils import preprocess_image
 from .lib.pyramid import process_multiscale
+from util import process_multiscale_d3
 
-MODEL_FILE = 'models/d2_tf.pth'
+MODEL_FILE = 'd2_net/models/d2_tf.pth'
 USE_RELU = True
 MAX_EDGE = 1600
 MAX_SUM_EDGES = 2800
@@ -30,7 +31,7 @@ OUTPUT_TYPE = 'npz'
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-def extract(model=None, output_extension='.d2-net'):
+def extract(model=None, output_extension='.d2-net', verbose=True):
     # Creating CNN model
     if output_extension == '.d2-net':
         model = D2Net(
@@ -49,7 +50,7 @@ def extract(model=None, output_extension='.d2-net'):
         seq_file = './image_list_hpatches_sequences.txt'
     with open('./d2_net/image_list_hpatches_sequences.txt', 'r') as f:
         lines = f.readlines()
-    for line in tqdm(lines, total=len(lines)):
+    for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
         if not os.path.isfile(line.strip()):
             path = os.path.join('d2_net', line.strip())
         else:
@@ -86,11 +87,30 @@ def extract(model=None, output_extension='.d2-net'):
             keypoints = np.asarray([[*kp.pt, 1] for kp in keypoints])
             scores = np.zeros(len(keypoints))
         elif output_extension == '.ours':
-            # TODO
-            features, scores, efeatures = model(image)
-            keypoints = features
-            descriptors = efeatures
-            raise NotImplementedError
+            with torch.no_grad():
+                if MULTISCALE:
+                    keypoints, scores, descriptors = process_multiscale_d3(
+                        torch.tensor(
+                            input_image[np.newaxis, :, :, :].astype(np.float32),
+                            device=device
+                        ),
+                        model
+                    )
+                else:
+                    keypoints, scores, descriptors = process_multiscale_d3(
+                        torch.tensor(
+                            input_image[np.newaxis, :, :, :].astype(np.float32),
+                            device=device
+                        ),
+                        model,
+                        scales=[1]
+                    )
+                # i, j -> u, v
+                keypoints = keypoints[:, [1, 0, 2]]
+
+            # Input image coordinates
+            keypoints[:, 0] *= fact_i
+            keypoints[:, 1] *= fact_j
         else:
             with torch.no_grad():
                 if MULTISCALE:
