@@ -224,7 +224,7 @@ class D3Net(nn.Module):
         out_dict['d'] = self.localization(features)
 
         for c in run:
-            if c in run.keys():
+            if c in out_dict.keys():
                 out_list.append(out_dict[c])
 
         return out_list
