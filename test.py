@@ -33,6 +33,8 @@ lim = [1, 15]
 rng = np.arange(lim[0], lim[1] + 1)
 
 def mnn_matcher(descriptors_a, descriptors_b):
+    if descriptors_a.shape[0] == 0 or descriptors_b.shape[0] == 0:
+        return np.zeros((0, 2), dtype=np.int32)
     device = descriptors_a.device
     sim = descriptors_a @ descriptors_b.t()
     nn12 = torch.max(sim, dim=1)[1]
