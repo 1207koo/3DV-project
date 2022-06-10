@@ -48,6 +48,7 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
                 path = line.strip()
             if os.path.isfile(path + output_extension):
                 os.system('rm -rf %s'%(path + output_extension))
+        return output_extension
     # Creating CNN model
     if output_extension == '.d2-net':
         model = D2Net(
