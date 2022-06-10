@@ -54,6 +54,10 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True)
         for i in range(100):
             p = True
             for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
+                if not os.path.isfile(line.strip()):
+                    path = os.path.join('d2_net', line.strip())
+                else:
+                    path = line.strip()
                 if os.path.isfile(path + output_extension.replace('_auto', str(i))):
                     p = False
                     break
@@ -61,12 +65,12 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True)
                 output_extension = output_extension.replace('_auto', str(i))
                 break
     for line in tqdm(lines, total=len(lines), desc=output_extension, leave=verbose):
-        if os.path.isfile(path + output_extension) and exist_ok:
-            continue
         if not os.path.isfile(line.strip()):
             path = os.path.join('d2_net', line.strip())
         else:
             path = line.strip()
+        if os.path.isfile(path + output_extension) and exist_ok:
+            continue
 
         image = imageio.imread(path)
         if len(image.shape) == 2:
