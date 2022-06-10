@@ -71,7 +71,7 @@ for epoch in epoch_tqdm:
     loss_cnt = 0
 
     batch_tqdm = tqdm(train_loader, desc='batch', leave=False)
-    for img in range(0):
+    for img in batch_tqdm:
         b = img.shape[0]
         img = img.to(args.device, non_blocking=True)
         optimizer.zero_grad()
@@ -167,7 +167,9 @@ for epoch in epoch_tqdm:
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
         out_dict['val_d2net_matches'] = test_dict['d2net_matches']
+        out_dict['val_d2net_time'] = test_dict['d2net_time']
         out_dict['val_sift_matches'] = test_dict['sift_matches']
+        out_dict['val_d2net_time'] = test_dict['d2net_time']
         with torch.no_grad():
             extract(model, '.ours')
             out_dict['val_matches'], out_dict['val_time'] = test('ours', verbose=False)
@@ -186,7 +188,9 @@ for epoch in epoch_tqdm:
                 test_dict['sift_matches'], test_dict['sift_time'] = test('sift', verbose=False)
                 SIFT_DONE = True
         out_dict['test_d2net_matches'] = test_dict['d2net_matches']
+        out_dict['test_d2net_time'] = test_dict['d2net_time']
         out_dict['test_sift_matches'] = test_dict['sift_matches']
+        out_dict['test_sift_time'] = test_dict['sift_time']
         with torch.no_grad():
             extract(model, '.ours')
             out_dict['test_matches'], out_dict['test_time'] = test('ours', verbose=True)
