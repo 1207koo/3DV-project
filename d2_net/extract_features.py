@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 import numpy as np
 import warnings
@@ -33,7 +34,9 @@ OUTPUT_TYPE = 'npz'
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True, remove_only=False):
+def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True, remove_only=False, multiscale=None):
+    if multiscale is None:
+        multiscale = MULTISCALE
     assert len(output_extension) > 0
     seq_file = './d2_net/image_list_hpatches_sequences.txt'
     if not os.path.isfile(seq_file):
@@ -63,6 +66,8 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
         model = cv2.SIFT_create()
 
     # Process the file
+    runtime = 0.0
+    run_cnt = 0
     if output_extension[-5:] == '_auto':
         os.makedirs('cache/ours', exist_ok=True)
         for i in range(1000):
@@ -105,13 +110,14 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
             preprocessing=PREPROCESSING
         )
 
+        tic = time.time()
         if output_extension == '.sift':
             keypoints, descriptors =  model.detectAndCompute(image, None)
             keypoints = np.asarray([[*kp.pt, 1] for kp in keypoints])
             scores = np.zeros(len(keypoints))
         elif output_extension[:5] == '.ours':
             with torch.no_grad():
-                if MULTISCALE:
+                if multiscale:
                     keypoints, scores, descriptors = process_multiscale_d3(
                         torch.tensor(
                             input_image[np.newaxis, :, :, :].astype(np.float32),
@@ -136,7 +142,7 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
             keypoints[:, 1] *= fact_j
         else:
             with torch.no_grad():
-                if MULTISCALE:
+                if multiscale:
                     keypoints, scores, descriptors = process_multiscale(
                         torch.tensor(
                             input_image[np.newaxis, :, :, :].astype(np.float32),
@@ -159,6 +165,8 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
             # Input image coordinates
             keypoints[:, 0] *= fact_i
             keypoints[:, 1] *= fact_j
+        runtime += time.time() - tic
+        run_cnt += 1
 
         if OUTPUT_TYPE == 'npz':
             with open(path + output_extension, 'wb') as output_file:
@@ -181,5 +189,7 @@ def extract(model=None, output_extension='.d2-net', exist_ok=True, verbose=True,
         else:
             raise ValueError('Unknown output type.')
     
-    return output_extension
+    if run_cnt == 0:
+        run_cnt = 1
+    return output_extension, runtime / run_cnt
 

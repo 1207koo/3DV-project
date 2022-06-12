@@ -159,7 +159,7 @@ for epoch in epoch_tqdm:
     if (epoch + 1) % args.test_every == 0:
         model.eval()
         with torch.no_grad():
-            out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
+            out_ext, _ = extract(model, '.ours_auto', exist_ok=False, verbose=False)
             out_dict['val_matches'], out_dict['val_time'] = test(out_ext[1:], verbose=False)
             extract(model, out_ext, exist_ok=False, verbose=False, remove_only=True)
             if not D2_DONE:
@@ -182,7 +182,7 @@ for epoch in epoch_tqdm:
     if (epoch + 1) == args.epoch:
         model.eval()
         with torch.no_grad():
-            out_ext = extract(model, '.ours_auto', exist_ok=False, verbose=False)
+            out_ext, _ = extract(model, '.ours_auto', exist_ok=False, verbose=False)
             out_dict['test_matches'], out_dict['test_time'] = test(out_ext[1:], verbose=True)
             extract(model, out_ext, exist_ok=False, verbose=False, remove_only=True)
             if not D2_DONE:

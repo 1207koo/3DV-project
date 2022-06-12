@@ -148,20 +148,29 @@ class HandcraftedLocalizationModule(nn.Module):
 
 class D3Net(nn.Module):
     # detect and describe and distill
-    def __init__(self):
+    def __init__(self, dim=None, original_dim=None, load_model=''):
         super(D3Net, self).__init__()
-        self.feature_dim = args.dim
+        if dim is None:
+            self.feature_dim = args.dim
+        else:
+            self.feature_dim = dim
+        if original_dim is None:
+            self.feature_original_dim = args.original_dim
+        else:
+            self.feature_original_dim = original_dim
 
-        self.feature, self.feature_scale = create_cnn(args.model_config['feature'], args.model_config['feature_nonlinear'], negative=args.dim, return_scale=True)
+        self.feature, self.feature_scale = create_cnn(args.model_config['feature'], args.model_config['feature_nonlinear'], negative=self.feature_dim, return_scale=True)
         self.detection = SoftDetectionModule()
         self.detection_hard = HardDetectionModule()
-        self.expansion = create_cnn(args.model_config['expansion'], args.model_config['expansion_nonlinear'], kernel=1, last_dim=args.dim, negative=args.original_dim)
+        self.expansion = create_cnn(args.model_config['expansion'], args.model_config['expansion_nonlinear'], kernel=1, last_dim=self.feature_dim, negative=self.feature_original_dim)
         self.localization = HandcraftedLocalizationModule()
 
-        if args.load_model == '':
-            self.init_weight()
-        else:
+        if load_model != '':
+            self.load_state_dict(torch.load(load_model, map_location='cpu'))
+        elif args.load_model == '':
             self.load_state_dict(torch.load(args.load_model, map_location='cpu'))
+        else:
+            self.init_weight()
 
     def init_weight(self):
         if args.model_config['feature_nonlinear'] == 'relu':
